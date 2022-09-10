@@ -6,10 +6,12 @@ const { mapDBtoModel } = require('../utils');
 
 class OpenMusicService {
   constructor() {
-    this._pool = new Pool();
+    this._pool = new Pool(); // all parameter is fetched from .env by default
   }
 
-  // album services
+  /**
+   * START OF ALBUM service
+   */
   async addAlbum({ name, year }) {
     // generate id for new album
     const id = `album-${nanoid(16)}`;
@@ -33,45 +35,41 @@ class OpenMusicService {
   }
 
   async getAlbumById(id) {
-    // prepare query, using id
+    // prepare query, using id for fetching album
     const query = {
       text: 'SELECT * FROM albums WHERE id = $1',
       values: [id],
     };
 
+    // prepare query, using id for fetching corespondent songs
     const songQuery = {
       text: 'SELECT id, title, performer FROM songs WHERE album_id = $1',
       values: [id],
     };
 
-    // run query, fetch data into result
+    // run both query, fetch data into result
     const result = await this._pool.query(query);
     const songResult = await this._pool.query(songQuery);
 
-    // result validation
+    // result validation - no need to validate song Result
     if (!result.rows.length) {
       throw new NotFoundError('Album tidak ditemukan');
     }
 
+    // merge song result into result
     result.rows[0].songs = songResult.rows;
-
-    // return result
-    // return result.rows.map(mapDBtoModel)[0];
 
     return result.rows[0];
   }
 
   async editAlbumById(id, { name, year }) {
-    // init new date
-    // const updatedAt = new Date().toISOString();
-
     // prepare query
     const query = {
       text: 'UPDATE albums SET name = $1, year = $2 WHERE id = $3 RETURNING id',
       values: [name, year, id],
     };
 
-    // run query
+    // run query - fetch data from db
     const result = await this._pool.query(query);
 
     // validate result
@@ -96,22 +94,22 @@ class OpenMusicService {
     }
   }
 
-  // song services
+  /**
+   * START OF SONG SERVICE
+   */
   async addSong({
     title, year, genre, performer, duration, albumId,
   }) {
-    // initialize metadata for a new song
+    // generate id for new song
     const id = `song-${nanoid(16)}`;
-    // const createdAt = new Date().toISOString();
-    // const updatedAt = createdAt;
 
-    // prepare query for insert into songs table
+    // prepare query for insert into songs table db
     const query = {
       text: 'INSERT INTO songs(id, title, year, genre, performer, duration, album_id) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
       values: [id, title, year, genre, performer, duration, albumId],
     };
 
-    // run query anf get result
+    // run query and fetch result
     const result = await this._pool.query(query);
 
     // check if successfully inserted
@@ -119,44 +117,48 @@ class OpenMusicService {
       throw new InvariantError('Lagu gagal ditambahkan');
     }
 
-    // return id
     return result.rows[0].id;
   }
 
   async getSongs(query) {
+    // just simple function to wrap str with '%' for later use in postgresql query
+    const wrap = (str) => `%${str}%`;
+
+    // destructuring request.query passed from handler
     const { title, performer } = query;
-    const wrap = (text) => `%${text}%`;
-    const titleQuery = wrap(title); const
-      performerQuery = wrap(performer);
+
+    // wrap all query data
+    const titleQuery = wrap(title);
+    const performerQuery = wrap(performer);
 
     // default query
     let pgQuery = 'SELECT id, title, performer FROM songs';
-    if (title && performer) {
+
+    // in any query exist, default postgresql query will be replaced
+    // this three if function feels redundant, need optimizing later
+    if (title && performer) { // using both query
       pgQuery = {
         text: 'SELECT id, title, performer FROM songs WHERE title ILIKE $1 AND performer ILIKE $2',
         values: [titleQuery, performerQuery],
       };
     }
-    if (!title && performer) {
+    if (!title && performer) { // only performer
       pgQuery = {
         text: 'SELECT id, title, performer FROM songs WHERE performer ILIKE $1',
         values: [performerQuery],
       };
     }
-    if (title && !performer) {
+    if (title && !performer) { // only title
       pgQuery = {
         text: 'SELECT id, title, performer FROM songs WHERE title ILIKE $1',
         values: [titleQuery],
       };
     }
-    // console.log(pgQuery)
-    // fetch data from db
-    // const result = await this._pool.query('SELECT id, title, performer FROM songs');
-    const result = await this._pool.query(pgQuery);
-    // const test = await this._pool.query('SELECT id, title, performer FROM songs WHERE ');
-    console.log(result);
 
-    // return data from result
+    // fetch data from db
+    const result = await this._pool.query(pgQuery);
+
+    // return data from result variable
     return result.rows;
   }
 
@@ -167,7 +169,7 @@ class OpenMusicService {
       values: [id],
     };
 
-    // run query, fetch data intu result
+    // run query, fetch data into result
     const result = await this._pool.query(query);
 
     // result validation

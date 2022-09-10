@@ -66,8 +66,12 @@ class OpenMusicHandler {
 
   async getAlbumByIdHandler(request, h) {
     try {
+      // init
       const { id } = request.params;
+
+      // pass to openmusic service
       const album = await this._service.getAlbumById(id);
+
       return {
         status: 'success',
         data: {
@@ -95,10 +99,13 @@ class OpenMusicHandler {
 
   async putAlbumByIdHandler(request, h) {
     try {
+      // handler init
       this._validator.validateAlbumPayload(request.payload);
       const { id } = request.params;
 
+      // pass to openmusic service
       await this._service.editAlbumById(id, request.payload);
+
       return {
         status: 'success',
         message: 'Album berhasil diperbarui',
@@ -124,8 +131,12 @@ class OpenMusicHandler {
 
   async deleteAlbumByIdHandler(request, h) {
     try {
+      // handler init
       const { id } = request.params;
+
+      // pass data to openmusic service
       await this._service.deleteAlbumById(id);
+
       return {
         status: 'success',
         message: 'Album berhasil dihapus',
@@ -152,8 +163,10 @@ class OpenMusicHandler {
   // For Song routes later
   async postSongHandler(request, h) {
     try {
-      // Parse payload
+      // handler init - pass all payload to validator
       this._validator.validateSongPayload(request.payload);
+
+      // deconstruc payload
       const {
         title, year, genre, performer, duration, albumId,
       } = request.payload;
@@ -163,7 +176,7 @@ class OpenMusicHandler {
         title, year, genre, performer, duration, albumId,
       });
 
-      // Initialized response
+      // init success response
       const response = h.response({
         status: 'success',
         message: 'Lagu berhasil ditambahkan',
@@ -172,7 +185,7 @@ class OpenMusicHandler {
         },
       });
 
-      // Add more response
+      // change default code
       response.code(201);
       return response;
     } catch (error) {
@@ -198,6 +211,7 @@ class OpenMusicHandler {
   }
 
   async getSongsHandler(request) {
+    // pass data (with query if it exist) to openMusic service
     const songs = await this._service.getSongs(request.query);
     return {
       status: 'success',
@@ -209,7 +223,10 @@ class OpenMusicHandler {
 
   async getSongByIdHandler(request, h) {
     try {
+      // init handler
       const { id } = request.params;
+
+      // pass data to open service, store return value ini song variable
       const song = await this._service.getSongById(id);
       return {
         status: 'success',
@@ -238,9 +255,13 @@ class OpenMusicHandler {
 
   async putSongByIdHandler(request, h) {
     try {
+      // pass ALL payload into song validator
       this._validator.validateSongPayload(request.payload);
+
+      // destructure params
       const { id } = request.params;
 
+      // pass data into service
       await this._service.editSongById(id, request.payload);
       return {
         status: 'success',
@@ -267,7 +288,10 @@ class OpenMusicHandler {
 
   async deleteSongByIdHandler(request, h) {
     try {
+      // handler init - destructuring request.params object
       const { id } = request.params;
+
+      // pass data to service
       await this._service.deleteSongById(id);
       return {
         status: 'success',
