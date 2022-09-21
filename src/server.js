@@ -1,24 +1,18 @@
 require('dotenv').config();
 
 const Hapi = require('@hapi/hapi');
-
-// OLD service
-// const openMusic = require('./api/openMusic');
-// const OpenMusicService = require('./services/postgres/OpenMusicService');
-// const OpenMusicValidator = require('./validator/openMusic');
-
-// New Service
+// album
 const albums = require('./api/albums'); // ALBUM PLUGIN
 const AlbumService = require('./services/postgres/AlbumService');
 const AlbumsValidator = require('./validator/albums');
 
+// song
 const song = require('./api/song'); // song PLUGIN
 const SongService = require('./services/postgres/SongService');
 const SongValidator = require('./validator/song');
 
 const init = async () => {
   // init Service
-  // const openMusicService = new OpenMusicService();
   const albumService = new AlbumService();
   const songService = new SongService();
 
@@ -33,13 +27,6 @@ const init = async () => {
   });
 
   await server.register([
-    // {
-    //   plugin: openMusic,
-    //   options: {
-    //     service: openMusicService,
-    //     validator: OpenMusicValidator,
-    //   },
-    // },
     {
       plugin: albums,
       options: {

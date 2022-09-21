@@ -3,13 +3,6 @@ const { Pool } = require('pg');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 
-const DEBUG = false;
-const pd = () => {
-  if (DEBUG) {
-    console.log('Run on new AlbumsService Plugin');
-  }
-};
-
 class AlbumService {
   constructor() {
     this._pool = new Pool();
@@ -32,8 +25,6 @@ class AlbumService {
     if (!result.rows[0].id) {
       throw new InvariantError('Album gagal ditambahkan');
     }
-    // DEBUG DEBUG DEBUG DEBUG
-    pd();
 
     // return id
     return result.rows[0].id;
@@ -64,9 +55,6 @@ class AlbumService {
     // merge song result into result
     result.rows[0].songs = songResult.rows;
 
-    // DEBUG DEBUG DEBUG DEBUG
-    pd();
-
     return result.rows[0];
   }
 
@@ -84,8 +72,6 @@ class AlbumService {
     if (!result.rows.length) {
       throw new NotFoundError('Gagal memperbarui Album. Id tidak ditemukan');
     }
-    // DEBUG DEBUG DEBUG DEBUG
-    pd();
   }
 
   async deleteAlbumById(id) {
@@ -102,9 +88,6 @@ class AlbumService {
     if (!result.rows.length) {
       throw new NotFoundError('Catatan gagal dihapus. Id tidak ditemukan');
     }
-
-    // DEBUG DEBUG DEBUG DEBUG
-    pd();
   }
 }
 

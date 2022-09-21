@@ -199,8 +199,6 @@ class AlbumsHandler {
       return response;
     }
   }
-
-
 }
 
 module.exports = AlbumsHandler;
