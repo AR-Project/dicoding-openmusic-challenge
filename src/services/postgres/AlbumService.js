@@ -53,7 +53,7 @@ class AlbumService {
     }
 
     // merge song result into result
-    result.rows[0].songs = songResult.rows;
+    result.rows[0].songs = songResult.rows; // <== THIS LINE IS CRUCIAL!!
 
     return result.rows[0];
   }
