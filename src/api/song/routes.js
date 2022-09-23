@@ -1,5 +1,4 @@
 const routes = (handler) => [
-  // song routes
   {
     method: 'POST',
     path: '/songs',

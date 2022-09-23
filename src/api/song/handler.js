@@ -1,5 +1,3 @@
-const ClientError = require('../../exceptions/ClientError');
-
 class SongHandler {
   constructor(service, validator) {
     this._service = service;
@@ -15,57 +13,36 @@ class SongHandler {
 
   // Start of SongHandler Method
   async postSongHandler(request, h) {
-    try {
-      // handler init - pass all payload to validator
-      this._validator.validateSongPayload(request.payload);
+    // validate payload via validator/songs
+    this._validator.validateSongPayload(request.payload);
 
-      // deconstruc payload
-      const {
-        title, year, genre, performer, duration, albumId,
-      } = request.payload;
+    // destructure payload,
+    const {
+      title, year, genre, performer, duration, albumId,
+    } = request.payload;
 
-      // Pass data to noteService
-      const songId = await this._service.addSong({
-        title, year, genre, performer, duration, albumId,
-      });
+    // add new song via service/pg/songs, expect a return songId
+    const songId = await this._service.addSong({
+      title, year, genre, performer, duration, albumId,
+    });
 
-      // init success response
-      const response = h.response({
-        status: 'success',
-        message: 'Lagu berhasil ditambahkan',
-        data: {
-          songId,
-        },
-      });
-
-      // change default code
-      response.code(201);
-      return response;
-    } catch (error) {
-      // User Error
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        return response;
-      }
-
-      // Server error
-      const response = h.response({
-        status: 'error',
-        message: 'Maaf, terjadi kegagalan pada server kami.',
-      });
-      response.code(500);
-      console.error(error);
-      return response;
-    }
+    // notify user, and pass back songId
+    const response = h.response({
+      status: 'success',
+      message: 'Lagu berhasil ditambahkan',
+      data: {
+        songId,
+      },
+    });
+    response.code(201); // change response code, add new data
+    return response;
   }
 
   async getSongsHandler(request) {
-    // pass data (with query if it exist) to openMusic service
+    // fetch songs via service/pg/songs
     const songs = await this._service.getSongs(request.query);
+
+    // pass data back to user
     return {
       status: 'success',
       data: {
@@ -74,99 +51,51 @@ class SongHandler {
     };
   }
 
-  async getSongByIdHandler(request, h) {
-    try {
-      // init handler
-      const { id } = request.params;
+  async getSongByIdHandler(request) {
+    // parse params, destructure params object
+    const { id } = request.params;
 
-      // pass data to open service, store return value ini song variable
-      const song = await this._service.getSongById(id);
-      return {
-        status: 'success',
-        data: {
-          song,
-        },
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        return response;
-      }
-      const response = h.response({
-        status: 'error',
-        message: 'Maaf, terjadi kegagalan pada server kami.',
-      });
-      response.code(500);
-      console.error(error);
-      return response;
-    }
+    // pass songId to service/pg/songs to get song data
+    const song = await this._service.getSongById(id);
+
+    // pass song data back to user;
+    return {
+      status: 'success',
+      data: {
+        song,
+      },
+    };
   }
 
-  async putSongByIdHandler(request, h) {
-    try {
-      // pass ALL payload into song validator
-      this._validator.validateSongPayload(request.payload);
+  async putSongByIdHandler(request) {
+    // validate payload via validator/songs
+    this._validator.validateSongPayload(request.payload);
 
-      // destructure params
-      const { id } = request.params;
+    // destructure params object
+    const { id } = request.params;
 
-      // pass data into service
-      await this._service.editSongById(id, request.payload);
-      return {
-        status: 'success',
-        message: 'Lagu berhasil diperbarui',
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        return response;
-      }
-      const response = h.response({
-        status: 'error',
-        message: 'Maaf, terjadi kegagalan pada server kami.',
-      });
-      response.code(500);
-      console.error(error);
-      return response;
-    }
+    // pass songID and request.payload (as whole object) via service/pg/songs
+    await this._service.editSongById(id, request.payload);
+
+    // notify user back
+    return {
+      status: 'success',
+      message: 'Lagu berhasil diperbarui',
+    };
   }
 
-  async deleteSongByIdHandler(request, h) {
-    try {
-      // handler init - destructuring request.params object
-      const { id } = request.params;
+  async deleteSongByIdHandler(request) {
+    // destructuring params object
+    const { id } = request.params;
 
-      // pass data to service
-      await this._service.deleteSongById(id);
-      return {
-        status: 'success',
-        message: 'Lagu berhasil dihapus',
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        return response;
-      }
-      const response = h.response({
-        status: 'error',
-        message: 'Maaf, terjadi kegagalan pada server kami.',
-      });
-      response.code(500);
-      console.error(error);
-      return response;
-    }
+    // pass songId to service/pg/songs
+    await this._service.deleteSongById(id);
+
+    // notify user
+    return {
+      status: 'success',
+      message: 'Lagu berhasil dihapus',
+    };
   }
 }
 

@@ -1,88 +1,59 @@
-const ClientError = require('../../exceptions/ClientError');
-
 class CollaborationsHandler {
   constructor(collaborationsService, playlistService, validator) {
     this._collaborationsService = collaborationsService;
     this._playlistService = playlistService;
     this._validator = validator;
 
+    // bind method
     this.postCollaborationHandler = this.postCollaborationHandler.bind(this);
     this.deleteCollaborationHandler = this.deleteCollaborationHandler.bind(this);
   }
 
   async postCollaborationHandler(request, h) {
-    try {
-      this._validator.validateCollaborationPayload(request.payload);
-      const { id: credentialId } = request.auth.credentials;
-      const { playlistId, userId } = request.payload;
+    // validate payload via validator/collaborations
+    this._validator.validateCollaborationPayload(request.payload);
 
-      await this._playlistService.verifyPlaylistOwner(playlistId, credentialId);
-      // push data to collab table
-      const collaborationId = await this._collaborationsService
-        .addCollaboration(playlistId, userId);
+    // destruct credentials object and parse payload
+    const { id: credentialId } = request.auth.credentials;
+    const { playlistId, userId } = request.payload;
 
-      const response = h.response({
-        status: 'success',
-        message: 'Kolaborasi berhasil ditambahkan',
-        data: {
-          collaborationId,
-        },
-      });
-      response.code(201);
-      return response;
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        return response;
-      }
+    // verify if current userID is valid owner of playlistID via service/PlaylistService
+    await this._playlistService.verifyPlaylistOwner(playlistId, credentialId);
 
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Maaf, terjadi kegagalan pada server kami.',
-      });
-      response.code(500);
-      console.error(error);
-      return response;
-    }
+    // push data into db via service/CollaborationService, expect a return value
+    const collaborationId = await this._collaborationsService
+      .addCollaboration(playlistId, userId);
+
+    // pass collaborationId back to user, with message
+    const response = h.response({
+      status: 'success',
+      message: 'Kolaborasi berhasil ditambahkan',
+      data: {
+        collaborationId,
+      },
+    });
+    response.code(201); // change response code, changing something in db
+    return response;
   }
 
-  async deleteCollaborationHandler(request, h) {
-    try {
-      this._validator.validateCollaborationPayload(request.payload);
-      const { id: credentialId } = request.auth.credentials;
-      const { playlistId, userId } = request.payload;
+  async deleteCollaborationHandler(request) {
+    // validate payload via validator/collaborations
+    this._validator.validateCollaborationPayload(request.payload);
 
-      await this._playlistService.verifyPlaylistOwner(playlistId, credentialId);
-      await this._collaborationsService.deleteCollaboration(playlistId, userId);
+    // destruct credentials object and parse payload
+    const { id: credentialId } = request.auth.credentials;
+    const { playlistId, userId } = request.payload;
 
-      return {
-        status: 'success',
-        message: 'Kolaborasi berhasil dihapus',
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        return response;
-      }
+    // verify if current userID is valid owner of playlistID via service/PlaylistService
+    await this._playlistService.verifyPlaylistOwner(playlistId, credentialId);
 
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Maaf, terjadi kegagalan pada server kami.',
-      });
-      response.code(500);
-      console.error(error);
-      return response;
-    }
+    // remove the row in collaboration table via service/collaborationService
+    await this._collaborationsService.deleteCollaboration(playlistId, userId);
+
+    return {
+      status: 'success',
+      message: 'Kolaborasi berhasil dihapus',
+    };
   }
 }
 

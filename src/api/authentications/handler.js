@@ -1,8 +1,6 @@
-const ClientError = require('../../exceptions/ClientError');
-
 class AuthenticationHandler {
   constructor(authenticationsService, usersService, tokenManager, validator) {
-    // change 'scope' of passed function/class from server to be used in this file scope
+    // change 'scope' of passed function/class
     this._authenticationsService = authenticationsService;
     this._usersService = usersService;
     this._tokenManager = tokenManager;
@@ -15,150 +13,86 @@ class AuthenticationHandler {
   }
 
   async postAuthenticationHandler(request, h) {
-    try {
-      // validate data only using JOI in Authentication Validation
-      // if validation fail means data sent from user is invalid
-      this._validator.validatePostAuthenticationPayload(request.payload);
+    /*   personal note: this handler dealing with user login     */
 
-      // destructure payload after username and password is valid
-      const { username, password } = request.payload;
+    // validate payload via validator/authentications
+    this._validator.validatePostAuthenticationPayload(request.payload);
 
-      // verify username and password compared in database using user services
-      // if username and password not valid, error will threw from userservice, and
-      // being catched here
-      const id = await this._usersService.verifyUserCredential(username, password);
+    // parse payload - destructure object
+    const { username, password } = request.payload;
 
-      // generate new token from Token Manager
-      const accessToken = this._tokenManager.generateAccessToken({ id });
-      const refreshToken = this._tokenManager.generateRefreshToken({ id });
+    // pass parsed data to service/postgres/UsersService
+    const id = await this._usersService.verifyUserCredential(username, password);
 
-      // store refresh token into database using authentication service
-      await this._authenticationsService.addRefreshToken(refreshToken);
+    // generate new token from tokenize/TokenManager
+    const accessToken = this._tokenManager.generateAccessToken({ id });
+    const refreshToken = this._tokenManager.generateRefreshToken({ id });
 
-      // put accessToken and refresh token in body response
-      const response = h.response({
-        status: 'success',
-        message: 'Authentication berhasil ditambahkan',
-        data: {
-          accessToken,
-          refreshToken,
-        },
-      });
+    // only refreshToken alone is stored in db via service/postgres/AuthenticationService
+    await this._authenticationsService.addRefreshToken(refreshToken);
 
-      response.code(201);
-      return response;
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        return response;
-      }
+    // return both accessToken and refreshToken to user
+    const response = h.response({
+      status: 'success',
+      message: 'Authentication berhasil ditambahkan',
+      data: {
+        accessToken,
+        refreshToken,
+      },
+    });
 
-      // server error
-      const response = h.response({
-        status: 'error',
-        message: 'Maaf, terjadi kegagalan pada server kami.',
-      });
-      response.code(500);
-      console.error(error);
-      return response;
-    }
+    response.code(201); // change response code
+    return response;
   }
 
-  async putAuthenticationHandler(request, h) {
-    // this function only run via route PUT /authentications,
-    // refresh token is long lasting than access token
-    // so this function is used for generate NEW ACCESS TOKEN
+  async putAuthenticationHandler(request) {
+    // validate payload via validator/authentications
+    this._validator.validatePutAuthenticationPayload(request.payload);
 
-    try {
-      // validate if refresh token is exist from user using auth validator > Joi schema
-      this._validator.validatePutAuthenticationPayload(request.payload);
+    // parse payload -- destructuring object
+    const { refreshToken } = request.payload;
 
-      // get current refresh token
-      const { refreshToken } = request.payload;
+    // validate refreshTokens via service/postgres/AuthenticationsService
+    // -- note: this just compare user refreshToken with exist refreshToken on db
+    await this._authenticationsService.verifyRefreshToken(refreshToken);
 
-      // validate refreshed tokens auth service > verify > auth database
-      await this._authenticationsService.verifyRefreshToken(refreshToken);
+    // now VALID refreshToken is passed to tokenize/TokenManager to get userId
+    const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
 
-      // verify signature(?) of refreshed token, refreshed token must be
-      // contain id?
-      const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
+    // generate new accessToken
+    const accessToken = this._tokenManager.generateAccessToken({ id });
 
-      // generate new accessToken which is short lived compared to refreshToken
-      const accessToken = this._tokenManager.generateAccessToken({ id });
-
-      // put new generated accessToken into response data;
-      return {
-        status: 'success',
-        message: 'Access Token berhasil diperbarui',
-        data: {
-          accessToken,
-        },
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        return response;
-      }
-
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Maaf, terjadi kegagalan pada server kami.',
-      });
-      response.code(500);
-      console.error(error);
-      return response;
-    }
+    // give accessToken back to user
+    return {
+      status: 'success',
+      message: 'Access Token berhasil diperbarui',
+      data: {
+        accessToken,
+      },
+    };
   }
 
-  async deleteAuthenticationHandler(request, h) {
-    // used for delete refreshToken in database
-    try {
-      // validate payload if it contains refresh tokens
-      this._validator.validateDeleteAuthenticationPayload(request.payload);
+  async deleteAuthenticationHandler(request) {
+    /**    personal note: this used when user log out
+     *     in summary, delete refresh token in the database
+     */
 
-      // get refresh token from request.payload
-      const { refreshToken } = request.payload;
+    // validate payload via validator/authentications
+    this._validator.validateDeleteAuthenticationPayload(request.payload);
 
-      // validate refreshToken against database via auth service
-      // if it not there auth service will call error
-      await this._authenticationsService.verifyRefreshToken(refreshToken);
+    // parse payload, destructure refresh token
+    const { refreshToken } = request.payload;
 
-      // finally delete refreshToken in database via auth service
-      await this._authenticationsService.deleteRefreshToken(refreshToken);
+    // validate refreshToken from user - throw error if invalid
+    await this._authenticationsService.verifyRefreshToken(refreshToken);
 
-      // return matching requirement
-      return {
-        status: 'success',
-        message: 'Refresh token berhasil dihapus',
-      };
-    } catch (error) {
-      if (error instanceof ClientError) {
-        const response = h.response({
-          status: 'fail',
-          message: error.message,
-        });
-        response.code(error.statusCode);
-        return response;
-      }
+    // finally delete refreshToken in database via service/postgres/AuthenticationService
+    await this._authenticationsService.deleteRefreshToken(refreshToken);
 
-      // Server ERROR!
-      const response = h.response({
-        status: 'error',
-        message: 'Maaf, terjadi kegagalan pada server kami.',
-      });
-      response.code(500);
-      console.error(error);
-      return response;
-    }
+    return {
+      status: 'success',
+      message: 'Refresh token berhasil dihapus',
+    };
   }
 }
 

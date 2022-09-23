@@ -6,7 +6,7 @@ const { mapDBtoModel } = require('../utils');
 
 class SongService {
   constructor() {
-    this._pool = new Pool();
+    this._pool = new Pool(); // postgres db, need env
   }
 
   async addSong({
@@ -17,7 +17,10 @@ class SongService {
 
     // prepare query for insert into songs table db
     const query = {
-      text: 'INSERT INTO songs(id, title, year, genre, performer, duration, album_id) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      text: `
+        INSERT INTO songs(id, title, year, genre, performer, duration, album_id) 
+        VALUES($1, $2, $3, $4, $5, $6, $7) 
+        RETURNING id`,
       values: [id, title, year, genre, performer, duration, albumId],
     };
 
@@ -42,39 +45,47 @@ class SongService {
     const titleQuery = wrap(title);
     const performerQuery = wrap(performer);
 
-    // default query
+    // prep DEFAULT query
     let pgQuery = 'SELECT id, title, performer FROM songs';
 
-    // in any query exist, default postgresql query will be replaced
-    // this three if function feels redundant, need optimizing later
-    if (title && performer) { // using both query
+    // in any query exist, default pgquery will be replaced
+    if (title && performer) { // query title and performer exist
       pgQuery = {
-        text: 'SELECT id, title, performer FROM songs WHERE title ILIKE $1 AND performer ILIKE $2',
+        text: `
+          SELECT id, title, performer 
+          FROM songs 
+          WHERE title ILIKE $1 AND performer ILIKE $2`,
         values: [titleQuery, performerQuery],
       };
     }
     if (!title && performer) { // only performer
       pgQuery = {
-        text: 'SELECT id, title, performer FROM songs WHERE performer ILIKE $1',
+        text: `
+          SELECT id, title, performer 
+          FROM songs 
+          WHERE performer ILIKE $1`,
         values: [performerQuery],
       };
     }
     if (title && !performer) { // only title
       pgQuery = {
-        text: 'SELECT id, title, performer FROM songs WHERE title ILIKE $1',
+        text: `
+          SELECT id, title, performer 
+          FROM songs 
+          WHERE title ILIKE $1`,
         values: [titleQuery],
       };
     }
 
-    // fetch data from db
+    // run query - fetch data
     const result = await this._pool.query(pgQuery);
 
-    // return data from result variable
+    // return result
     return result.rows;
   }
 
   async getSongById(id) {
-    // init query data using id
+    // prep query: filter songs table using songId
     const query = {
       text: 'SELECT * FROM songs WHERE id = $1',
       values: [id],
@@ -95,9 +106,13 @@ class SongService {
   async editSongById(id, {
     title, year, genre, performer, duration, albumId,
   }) {
-    // prepare query
+    // prep query: UPDATE rows with new data using songId
     const query = {
-      text: 'UPDATE songs SET title = $1, year = $2, genre = $3, performer = $4, duration = $5, album_id = $6 WHERE id = $7 RETURNING id',
+      text: `
+        UPDATE songs 
+        SET title = $1, year = $2, genre = $3, performer = $4, duration = $5, album_id = $6 
+        WHERE id = $7 
+        RETURNING id`,
       values: [title, year, genre, performer, duration, albumId, id],
     };
 
@@ -111,13 +126,13 @@ class SongService {
   }
 
   async deleteSongById(id) {
-    // prepare query
+    // prep query
     const query = {
       text: 'DELETE FROM songs WHERE id = $1 RETURNING id',
       values: [id],
     };
 
-    // run query
+    // run query - fetch data
     const result = await this._pool.query(query);
 
     // validate result

@@ -8,34 +8,35 @@ class AuthenticationsService {
     this._pool = new Pool();
   }
 
-  // add refreshed token into authentications tables
   async addRefreshToken(token) {
+    // prep query: insert refreshToken into authentications
     const query = {
       text: 'INSERT INTO authentications VALUES($1)',
       values: [token],
     };
 
+    // run query, no need to store result
     await this._pool.query(query);
   }
 
   async verifyRefreshToken(token) {
-    // prep query for  refresh token that stored in db using input token
+    // prep query: check if refreshToken exist inside authentications table
     const query = {
       text: 'SELECT token FROM authentications WHERE token = $1',
       values: [token],
     };
 
-    // fetch query
+    // run query - fetch data into result
     const result = await this._pool.query(query);
 
-    // check if result bring back any token
+    // using result: validate if query return something
     if (!result.rows.length) {
       throw new InvariantError('Refresh token tidak valid');
     }
   }
 
   async deleteRefreshToken(token) {
-    // prep query
+    // prep query: delete a row of authentications table using refreshToken
     const query = {
       text: 'DELETE FROM authentications WHERE token = $1',
       values: [token],

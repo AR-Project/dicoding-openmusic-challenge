@@ -2,8 +2,10 @@ require('dotenv').config();
 
 const Hapi = require('@hapi/hapi');
 
-// eslint-disable-next-line no-unused-vars
 const Jwt = require('@hapi/jwt');
+
+// error handling
+const ClientError = require('./exceptions/ClientError');
 
 // album
 const albums = require('./api/albums'); // ALBUM PLUGIN
@@ -21,10 +23,10 @@ const UserService = require('./services/postgres/UsersService');
 const UserValidator = require('./validator/users');
 
 // authenttication
-const authentications = require('./api/authentications'); // looking for index.js
-const AuthenticationsService = require('./services/postgres/AuthenticationsService'); // need to be passed
-const TokenManager = require('./tokenize/TokenManager'); // need to be passed in plugin register
-const AuthenticationsValidator = require('./validator/authentications'); // will be passed
+const authentications = require('./api/authentications'); // authentication PLUGIN
+const AuthenticationsService = require('./services/postgres/AuthenticationsService');
+const TokenManager = require('./tokenize/TokenManager');
+const AuthenticationsValidator = require('./validator/authentications');
 
 // playlist
 const playlists = require('./api/playlists');
@@ -123,6 +125,38 @@ const init = async () => {
       },
     },
   ]);
+
+  server.ext('onPreResponse', (request, h) => {
+    // destructure request object, taking response
+    const { response } = request;
+
+    // catch ALL ERROR in response
+    if (response instanceof Error) {
+      // catch ClientError
+      if (response instanceof ClientError) {
+        const newResponse = h.response({
+          status: 'fail',
+          message: response.message,
+        });
+        newResponse.code(response.statusCode);
+        return newResponse;
+      }
+      // skip error, keep respond continue if it threw by server side.
+      if (!response.isServer) {
+        return h.continue;
+      }
+      // catch error if something wrong with app
+      const newResponse = h.response({
+        status: 'error',
+        message: 'terjadi kegagalan pada server kami',
+      });
+      newResponse.code(500);
+      return newResponse;
+    }
+
+    // if response not an error
+    return h.continue;
+  });
 
   await server.start();
   console.log(`Server berjalan pada ${server.info.uri}`);

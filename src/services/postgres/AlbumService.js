@@ -31,31 +31,32 @@ class AlbumService {
   }
 
   async getAlbumById(id) {
-    // prepare query, using id for fetching album
+    // prepare query: fetch album using albumId
     const query = {
       text: 'SELECT * FROM albums WHERE id = $1',
       values: [id],
     };
 
-    // prepare query, using id for fetching corespondent songs
+    // prepare query: fetch songs using albumId
     const songQuery = {
       text: 'SELECT id, title, performer FROM songs WHERE album_id = $1',
       values: [id],
     };
 
-    // run both query, fetch data into result
-    const result = await this._pool.query(query);
-    const songResult = await this._pool.query(songQuery);
+    // run both query at the same time.
+    const albumResult = await this._pool.query(query);
+    const songsResult = await this._pool.query(songQuery);
 
-    // result validation - no need to validate song Result
-    if (!result.rows.length) {
+    // validate albumResult, note: no need to validate songResult
+    if (!albumResult.rows.length) {
       throw new NotFoundError('Album tidak ditemukan');
     }
 
-    // merge song result into result
-    result.rows[0].songs = songResult.rows; // <== THIS LINE IS CRUCIAL!!
+    // merge songResult rows INTO albumResult
+    albumResult.rows[0].songs = songsResult.rows; // <== THIS LINE IS CRUCIAL!!
 
-    return result.rows[0];
+    // giving back albumResult that has songResult in it
+    return albumResult.rows[0];
   }
 
   async editAlbumById(id, { name, year }) {
@@ -65,7 +66,7 @@ class AlbumService {
       values: [name, year, id],
     };
 
-    // run query - fetch data from db
+    // run query - updating data on db
     const result = await this._pool.query(query);
 
     // validate result
