@@ -18,4 +18,17 @@ const mapDBtoModel = ({
   albumId: album_id,
 });
 
-module.exports = { mapDBtoModel };
+// convert object structure, per challenge requirement
+const mapAlbumDBtoModel = ({
+  id,
+  name,
+  year,
+  cover_url,
+}) => ({
+  id,
+  name,
+  year,
+  coverUrl: cover_url,
+});
+
+module.exports = { mapDBtoModel, mapAlbumDBtoModel };
