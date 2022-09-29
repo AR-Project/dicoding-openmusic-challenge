@@ -49,14 +49,23 @@ const uploads = require('./api/uploads'); // upload plugin
 const StorageService = require('./services/storage/StorageService');
 const UploadsValidator = require('./validator/uploads');
 
+// likes
+const likes = require('./api/likes'); // likes plugin;
+const LikesService = require('./services/postgres/LikesService');
+
+// cache
+const CacheService = require('./services/redis/CacheService');
+
 const init = async () => {
   // init Service
+  const cacheService = new CacheService();
   const userService = new UserService();
   const collaborationsService = new CollaborationsService(userService);
   const songService = new SongService();
   const playlistsService = new PlaylistsService(songService, collaborationsService);
   const albumService = new AlbumService();
   const authenticationService = new AuthenticationsService();
+  const likesService = new LikesService(cacheService);
 
   // static path is defined here
   const storageService = new StorageService(path.resolve(__dirname, 'resources/images'));
@@ -157,6 +166,12 @@ const init = async () => {
         albumService,
       },
     },
+    {
+      plugin: likes,
+      options: {
+        service: likesService,
+      },
+    },
   ]);
 
   server.ext('onPreResponse', (request, h) => {
@@ -179,7 +194,9 @@ const init = async () => {
         return h.continue;
       }
       // catch error if something wrong with app
+      // eslint-disable-next-line no-console
       console.log(response);
+
       const newResponse = h.response({
         status: 'error',
         message: 'terjadi kegagalan pada server kami',
@@ -193,6 +210,7 @@ const init = async () => {
   });
 
   await server.start();
+  // eslint-disable-next-line no-console
   console.log(`Server berjalan pada ${server.info.uri}`);
 };
 
