@@ -1,15 +1,13 @@
+const autoBind = require('auto-bind');
+
 class AuthenticationHandler {
   constructor(authenticationsService, usersService, tokenManager, validator) {
-    // change 'scope' of passed function/class
     this._authenticationsService = authenticationsService;
     this._usersService = usersService;
     this._tokenManager = tokenManager;
     this._validator = validator;
 
-    // binding
-    this.postAuthenticationHandler = this.postAuthenticationHandler.bind(this);
-    this.putAuthenticationHandler = this.putAuthenticationHandler.bind(this);
-    this.deleteAuthenticationHandler = this.deleteAuthenticationHandler.bind(this);
+    autoBind(this);
   }
 
   async postAuthenticationHandler(request, h) {

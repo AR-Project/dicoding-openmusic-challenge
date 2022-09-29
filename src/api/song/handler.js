@@ -1,17 +1,13 @@
+const autoBind = require('auto-bind');
+
 class SongHandler {
   constructor(service, validator) {
     this._service = service;
     this._validator = validator;
 
-    // bind for song handler
-    this.postSongHandler = this.postSongHandler.bind(this);
-    this.getSongsHandler = this.getSongsHandler.bind(this);
-    this.getSongByIdHandler = this.getSongByIdHandler.bind(this);
-    this.putSongByIdHandler = this.putSongByIdHandler.bind(this);
-    this.deleteSongByIdHandler = this.deleteSongByIdHandler.bind(this);
+    autoBind(this);
   }
 
-  // Start of SongHandler Method
   async postSongHandler(request, h) {
     // validate payload via validator/songs
     this._validator.validateSongPayload(request.payload);

@@ -1,9 +1,10 @@
+const autoBind = require('auto-bind');
+
 class LikesHandler {
   constructor(service) {
     this._service = service;
 
-    this.postLikeHandler = this.postLikeHandler.bind(this);
-    this.getLikesHandler = this.getLikesHandler.bind(this);
+    autoBind(this);
   }
 
   async postLikeHandler(request, h) {

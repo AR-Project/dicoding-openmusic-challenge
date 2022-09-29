@@ -1,5 +1,3 @@
-// bridge between handler and table authentications table database
-
 const { Pool } = require('pg');
 const InvariantError = require('../../exceptions/InvariantError');
 

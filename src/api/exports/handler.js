@@ -1,10 +1,12 @@
+const autoBind = require('auto-bind');
+
 class ExportsHandler {
   constructor(service, playlistsService, validator) {
     this._service = service;
     this._playlistsService = playlistsService;
     this._validator = validator;
 
-    this.postExportPlaylistHandler = this.postExportPlaylistHandler.bind(this);
+    autoBind(this);
   }
 
   async postExportPlaylistHandler(request, h) {
@@ -22,9 +24,6 @@ class ExportsHandler {
       playlistId,
       targetEmail: request.payload.targetEmail,
     };
-
-    // fetch playlist includes songs via service/pg/PlaylistService
-    // const playlist = await this._playlistService.getPlaylistByPlaylistId(playlistId);
 
     // send mesage to broker, playlistId is already filtered/ must be valid
     await this._service.sendMessage('export:playlist', JSON.stringify(message));

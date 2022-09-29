@@ -12,7 +12,7 @@ class LikesService {
 
   async verifyAlbum(albumId) {
     // prep query: too much hasle importing albumService here,
-    // for further optimizing, this method need to moved into albumService
+    // for further optimizing, this class method need to moved into albumService class
     const albumQuery = {
       text: `SELECT * 
         FROM albums 
@@ -44,7 +44,7 @@ class LikesService {
     // run query, fetch result into status var
     const status = await this._pool.query(query);
 
-    // "Cache Feature" : delete keys from reddis cache
+    // "Cache Feature" : delete keys from reddis cache first. Data in db WILL be modified below
     await this._cacheService.delete(`likes:${albumId}`);
 
     // branching by check count result.
@@ -52,11 +52,11 @@ class LikesService {
       await this.likeAlbum(albumId, userId); // action taken: 'like album'
     }
 
-    if (status.rows[0].count === '1') { // '1' == info is found
+    if (status.rows[0].count === '1') { // '1' == info is FOUND
       await this.dislikeAlbum(albumId, userId); // action taken: 'dislike/remove like album'
     }
 
-    // TODO for optimizing: catch error if result neither 0 or 1. Or is it redundant to making that?
+    // TODO for optimizing: catch error if result neither 0 or 1
   }
 
   async likeAlbum(albumId, userId) {
@@ -87,20 +87,20 @@ class LikesService {
   }
 
   async getLikesNumber(albumId) {
-    // trying to fetch data fron cache first
+    // TRYING to fetch data fron cache FIRST
     try {
-      // fetch data from cache, throw error if data not found
+      // fetch data from cache, will throw error if data not found
       const likes = await this._cacheService.get(`likes:${albumId}`);
 
-      // return likes inside object, per requirement, is data came from cache or not
+      // return likes value inside object Per requirement, to track the data source (is cache or db)
       return {
         likes,
         isCache: true, // set cache flag to true;
       };
 
-      // catch if there an error coming from cacheService, if it none, getLikesNumber stop here
-    } catch (error) {
-      // prep query: COUNT rows using album id
+      // contain error from cacheService in this block, if no error, class method ends here
+    } catch (error) { // continue the method if error detected
+      // prep query: COUNT rows using albumId
       const query = {
         text: `SELECT COUNT(*) 
           FROM user_album_likes
