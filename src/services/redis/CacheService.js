@@ -1,11 +1,12 @@
 const redis = require('redis');
+const config = require('../../utils/config');
 
 class CacheService {
   constructor() {
     // create redis object/connection
     this._client = redis.createClient({
       socket: {
-        host: process.env.REDIS_SERVER,
+        host: config.redis.host,
       },
     });
 
